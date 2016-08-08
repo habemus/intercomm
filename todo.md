@@ -1,0 +1,3 @@
+- add tests for loadErrorData
+- add method to warn that the ipc-node is going to ignore a message due to wrong destination
+- study whether it is a good idea to make id be a required option.
