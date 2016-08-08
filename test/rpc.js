@@ -51,14 +51,31 @@ describe('Intercomm#exec', function () {
         msg.params[0].should.equal('param1');
         msg.params[1].should.equal('param2');
 
-        done();
+        node2.handleMessage(msg);
       },
     });
 
+    var node2 = new Intercomm({
+      id: 'node2',
+      type: 'server',
+      apiVersion: '0.0.0',
+      sendMessage: function (msg) {
+        node1.handleMessage(msg);
+      }
+    });
+
+    node2.expose({
+      someMethod: function () {
+        return 'ok!';
+      }
+    })
+
     node1.exec('node2', 'someMethod', ['param1', 'param2'])
-      .then(function () {
-        // do not expect response
-        done(new Error('response not expected'));
+      .then(function (res) {
+
+        res.should.equal('ok!');
+
+        done();
       });
   });
 
@@ -98,8 +115,6 @@ describe('Intercomm#exec', function () {
       });
   });
 
-
-
   it('should execute a method defined on a remote node and allow for the api to return a promise', function (done) {
 
     var node1 = new Intercomm({
@@ -137,8 +152,14 @@ describe('Intercomm#exec', function () {
       .then(function (result) {
         result.should.equal('hello node1 from node2');
 
+        // check that the sent request has been `forgotten`
+        Object.keys(node1._sentRequests).length.should.equal(0);
+
         done();
       });
+
+    // check that the node1 is keeping track of the sent request
+    Object.keys(node1._sentRequests).length.should.equal(1);
   });
 
   it('should fail when executing a method that was not exposed on the remote node', function (done) {
@@ -167,9 +188,15 @@ describe('Intercomm#exec', function () {
       .catch(function (err) {
 
         err.name.should.equal('MethodUndefined');
+
+        // check that the sent request has been `forgotten`
+        Object.keys(node1._sentRequests).length.should.equal(0);
         done();
       })
       .done();
+
+    // check that the node1 is keeping track of the sent request
+    Object.keys(node1._sentRequests).length.should.equal(1);
   });
 
   it('should fail when remote node throws an error', function (done) {
@@ -203,10 +230,76 @@ describe('Intercomm#exec', function () {
         err.name.should.equal('TypeError');
         err.message.should.equal('some type error');
 
+        // check that the sent request has been `forgotten`
+        Object.keys(node1._sentRequests).length.should.equal(0);
+
         done();
       })
       .catch(done);
+      
+    // check that the node1 is keeping track of the sent request
+    Object.keys(node1._sentRequests).length.should.equal(1);
   });
+
+
+  it('should impose the request timeout', function (done) {
+
+    this.timeout(10000);
+
+    var timeoutMs = 2000;
+
+    var node1 = new Intercomm({
+      id: 'node1',
+      type: 'client',
+      apiVersion: '0.0.0',
+      // let node2 directly handle messages sent by node1
+      sendMessage: function (msg) {
+        node2.handleMessage(msg);
+      },
+      requestTimeout: timeoutMs,
+    });
+
+    var node2 = new Intercomm({
+      id: 'node2',
+      type: 'server',
+      apiVersion: '0.0.0',
+      // let node1 directly handle messages sent by node2
+      sendMessage: function (msg) {
+        node1.handleMessage(msg);
+      },
+    });
+
+    // expose hello method at node2;
+    node2.expose('hello', function (who) {
+      return new Promise(function (resolve, reject) {
+
+        setTimeout(function () {
+          resolve('hello ' + who + ' from node2');
+        }, timeoutMs + 100);
+      });
+    });
+
+    // execute the method on node2;
+    node1.exec('node2', 'hello', ['node1'])
+      .then(function (result) {
+        done(new Error('expected timeout error'));
+      }, function (err) {
+
+        err.should.be.instanceof(Intercomm.errors.RequestTimeout);
+
+        // check that the sent request has been `forgotten`
+        Object.keys(node1._sentRequests).length.should.equal(0);
+
+        // wait some time to check that
+        // after the timeout time the response should
+        // be discarded
+        setTimeout(done, 2000);
+      });
+
+    // check that the node1 is keeping track of the sent request
+    Object.keys(node1._sentRequests).length.should.equal(1);
+  });
+
 });
 
 describe('Intercomm#expose', function () {

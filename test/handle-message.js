@@ -61,10 +61,16 @@ describe('Intercomm#handleMessage', function () {
       to: 'another-node',
     });
 
-    node1.handleMessage(requestMsg);
+    node1.handleMessage(requestMsg)
+      .then(function (res) {
 
-    // wait some time to make sure the method is not called at all
-    setTimeout(done, 1000);
+        done(new Error('error expected'));
+
+      }, function (err) {
+        err.should.be.instanceof(Intercomm.errors.IncorrectDestination);
+
+        done();
+      });
   });
 
   
