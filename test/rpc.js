@@ -4,6 +4,7 @@ const util   = require('util');
 
 // third-party dependencies
 const should = require('should');
+const Bluebird = require('bluebird');
 
 const Intercomm = require('../lib/intercomm');
 
@@ -298,6 +299,62 @@ describe('Intercomm#exec', function () {
 
     // check that the node1 is keeping track of the sent request
     Object.keys(node1._sentRequests).length.should.equal(1);
+  });
+
+  it('should handle `sendMessage` synchronous error', function () {
+
+    var _err;
+
+    var node1 = new Intercomm({
+      id: 'node1',
+      apiVersion: '0.0.0',
+      type: 'client',
+      sendMessage: function () {
+        _err = new Error('error sending message');
+        throw _err;
+      },
+    });
+
+    // try to execute some method,
+    // but the sendMessage will fail execution
+    return node1.exec('some-other-node', 'someMethod')
+      .then(() => {
+        throw new Error('error expected')
+      }, (err) => {
+        err.name.should.eql('SendMessageError');
+        err.message.should.eql('error sending message');
+        err.sourceError.should.equal(_err);
+      });
+  });
+
+  it('should handle `sendMessage` asynchronous error', function () {
+
+    var _err;
+
+    var node1 = new Intercomm({
+      id: 'node1',
+      apiVersion: '0.0.0',
+      type: 'client',
+      sendMessage: function () {
+        return new Bluebird((resolve, reject) => {
+          setTimeout(() => {
+            _err = new Error('error sending message');
+            reject(_err);
+          }, 500);
+        });
+      },
+    });
+
+    // try to execute some method,
+    // but the sendMessage will fail execution
+    return node1.exec('some-other-node', 'someMethod')
+      .then(() => {
+        throw new Error('error expected');
+      }, (err) => {
+        err.name.should.eql('SendMessageError');
+        err.message.should.eql('error sending message');
+        err.sourceError.should.equal(_err);
+      });
   });
 
 });
