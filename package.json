@@ -1,6 +1,6 @@
 {
   "name": "intercomm",
-  "version": "1.0.0",
+  "version": "2.0.0-beta",
   "description": "",
   "main": "index.js",
   "scripts": {
@@ -9,9 +9,9 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "bluebird": "^3.4.1",
     "json-message": "^2.0.0-beta.5",
-    "object-path": "^0.9.2"
+    "object-path": "^0.9.2",
+    "uuid": "^3.3.2"
   },
   "devDependencies": {
     "browserify": "^13.1.0",
