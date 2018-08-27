@@ -68,7 +68,7 @@ describe('Intercomm#exec', function () {
       someMethod: function () {
         return 'ok!'
       }
-    })
+    }, ['someMethod'])
 
     node1.exec('node2', 'someMethod', ['param1', 'param2'])
       .then(function (res) {
@@ -102,9 +102,11 @@ describe('Intercomm#exec', function () {
     })
 
     // expose hello method at node2
-    node2.expose('hello', function (who) {
-      return 'hello ' + who + ' from node2'
-    })
+    node2.expose({
+      hello: function (who) {
+        return 'hello ' + who + ' from node2'
+      }
+    }, ['hello'])
 
     // execute the method on node2
     node1.exec('node2', 'hello', ['node1'])
@@ -138,14 +140,16 @@ describe('Intercomm#exec', function () {
     })
 
     // expose hello method at node2
-    node2.expose('hello', function (who) {
-      return new Promise(function (resolve, reject) {
+    node2.expose({
+      hello: function (who) {
+        return new Promise(function (resolve, reject) {
 
-        setTimeout(function () {
-          resolve('hello ' + who + ' from node2')
-        }, 1500)
-      })
-    })
+          setTimeout(function () {
+            resolve('hello ' + who + ' from node2')
+          }, 1500)
+        })
+      },
+    }, ['hello'])
 
     // execute the method on node2
     node1.exec('node2', 'hello', ['node1'])
@@ -219,9 +223,11 @@ describe('Intercomm#exec', function () {
       },
     })
 
-    node2.expose('throwErrorMethod', function () {
-      throw new TypeError('some type error')
-    })
+    node2.expose({
+      throwErrorMethod: function () {
+        throw new TypeError('some type error')
+      },
+    }, ['throwErrorMethod'])
 
     node1.exec('node2', 'throwErrorMethod')
       .then(function () {
@@ -270,14 +276,16 @@ describe('Intercomm#exec', function () {
     })
 
     // expose hello method at node2
-    node2.expose('hello', function (who) {
-      return new Promise(function (resolve, reject) {
+    node2.expose({
+      hello: function (who) {
+        return new Promise(function (resolve, reject) {
 
-        setTimeout(function () {
-          resolve('hello ' + who + ' from node2')
-        }, timeoutMs + 100)
-      })
-    })
+          setTimeout(function () {
+            resolve('hello ' + who + ' from node2')
+          }, timeoutMs + 100)
+        })
+      }
+    }, ['hello'])
 
     // execute the method on node2
     node1.exec('node2', 'hello', ['node1'])
@@ -367,12 +375,14 @@ describe('Intercomm#expose', function () {
       sendMessage: function (msg) {},
     })
 
-    node1.expose('someMethod', function () {})
+    node1.expose({
+      someMethod: function () {}
+    }, ['someMethod'])
 
     node1.api.someMethod.should.be.a.Function()
   })
 
-  it('should expose a full object of apis', function () {
+  it('should expose a full object of apis and exclude properties that are not functions', function () {
     var node1 = new Intercomm({
       id: 'node1',
       type: 'server',
@@ -385,7 +395,11 @@ describe('Intercomm#expose', function () {
       method2: function () {},
 
       property: '1231203',
-    })
+    }, [
+      'method1',
+      'method2',
+      'property'
+    ])
 
     node1.api.method1.should.be.a.Function()
     node1.api.method2.should.be.a.Function()
@@ -401,7 +415,68 @@ describe('Intercomm#expose', function () {
     })
 
     assert.throws(function () {
-      node1.expose('someMethod', function () {})
+      node1.expose({
+        someMethod: function() {}
+      }, ['someMethod'])
     })
+  })
+
+  it('should ignore methods that are defined in the source object but not explicitly declared in the methods option', () => {
+    let node1 = new Intercomm({
+      id: 'node1',
+      apiVersion: '0.0.0',
+      type: 'server',
+      sendMessage: () => {}
+    })
+
+    node1.expose({
+      method1: () => {},
+      method2: () => {}
+    }, ['method1'])
+
+    node1.api.method1.should.be.a.Function()
+    should(node1.api.method2).be.undefined()
+  })
+
+  it('should allow for defining a scope for the api', () => {
+    let node1 = new Intercomm({
+      id: 'node1',
+      apiVersion: '0.0.0',
+      type: 'server',
+      sendMessage: () => {}
+    })
+
+    node1.expose({
+      method1: () => {},
+      method2: () => {}
+    }, {
+      scope: 'someScopedAPI',
+      methods: ['method1', 'method2']
+    })
+
+    node1.api.someScopedAPI.should.be.a.Object()
+    node1.api.someScopedAPI.method1.should.be.a.Function()
+    node1.api.someScopedAPI.method2.should.be.a.Function()
+  })
+
+  it('should allow for deep scoping', () => {
+    let node1 = new Intercomm({
+      id: 'node1',
+      apiVersion: '0.0.0',
+      type: 'server',
+      sendMessage: () => {}
+    })
+
+    node1.expose({
+      method1: () => {},
+      method2: () => {}
+    }, {
+      scope: 'someScopedAPI.deeperScope',
+      methods: ['method1', 'method2']
+    })
+
+    node1.api.someScopedAPI.deeperScope.should.be.a.Object()
+    node1.api.someScopedAPI.deeperScope.method1.should.be.a.Function()
+    node1.api.someScopedAPI.deeperScope.method2.should.be.a.Function()
   })
 })

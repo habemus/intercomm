@@ -51,9 +51,11 @@ describe('Intercomm#handleMessage', function () {
       sendMessage: function () {},
     })
 
-    node1.expose('someMethod', function () {
-      done(new Error('expected message to be ignored'))
-    })
+    node1.expose({
+      someMethod: function () {
+        done(new Error('expected message to be ignored'))
+      }
+    }, ['someMethod'])
 
     var requestMsg = JSON.stringify({
       type: 'rpc-request',
