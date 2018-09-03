@@ -7,30 +7,30 @@ const should = require('should')
 
 const Intercomm = require('../lib/intercomm')
 
-describe('Intercomm#exec', function () {
+describe('Intercomm#exec', () => {
 
-  it('should require a destination as the first argument', function () {
+  it('should require a destination as the first argument', () => {
     var node1 = new Intercomm({
       id: 'node1',
       type: 'client',
       apiVersion: '0.0.0',
-      sendMessage: function () {},
+      sendMessage: () => {},
     })
 
-    assert.throws(function () {
+    assert.throws(() => {
       node1.exec(null, 'someMethod')
     })
   })
 
-  it('should require a method as the second argument', function () {
+  it('should require a method as the second argument', () => {
     var node1 = new Intercomm({
       id: 'node1',
       type: 'client',
       apiVersion: '0.0.0',
-      sendMessage: function () {},
+      sendMessage: () => {},
     })
 
-    assert.throws(function () {
+    assert.throws(() => {
       node1.exec('another-node', null)
     })
   })
@@ -51,7 +51,7 @@ describe('Intercomm#exec', function () {
         msg.params[0].should.equal('param1')
         msg.params[1].should.equal('param2')
 
-        node2.handleMessage(msg)
+        node2.handleMessage(msg.toJSON())
       },
     })
 
@@ -60,12 +60,12 @@ describe('Intercomm#exec', function () {
       type: 'server',
       apiVersion: '0.0.0',
       sendMessage: function (msg) {
-        node1.handleMessage(msg)
+        node1.handleMessage(msg.toJSON())
       }
     })
 
     node2.expose({
-      someMethod: function () {
+      someMethod: () => {
         return 'ok!'
       }
     }, ['someMethod'])
@@ -87,7 +87,7 @@ describe('Intercomm#exec', function () {
       apiVersion: '0.0.0',
       // let node2 directly handle messages sent by node1
       sendMessage: function (msg) {
-        node2.handleMessage(msg)
+        node2.handleMessage(msg.toJSON())
       },
     })
 
@@ -97,7 +97,7 @@ describe('Intercomm#exec', function () {
       apiVersion: '0.0.0',
       // let node1 directly handle messages sent by node2
       sendMessage: function (msg) {
-        node1.handleMessage(msg)
+        node1.handleMessage(msg.toJSON())
       },
     })
 
@@ -125,7 +125,7 @@ describe('Intercomm#exec', function () {
       apiVersion: '0.0.0',
       // let node2 directly handle messages sent by node1
       sendMessage: function (msg) {
-        node2.handleMessage(msg)
+        node2.handleMessage(msg.toJSON())
       },
     })
 
@@ -135,7 +135,7 @@ describe('Intercomm#exec', function () {
       apiVersion: '0.0.0',
       // let node1 directly handle messages sent by node2
       sendMessage: function (msg) {
-        node1.handleMessage(msg)
+        node1.handleMessage(msg.toJSON())
       },
     })
 
@@ -144,7 +144,7 @@ describe('Intercomm#exec', function () {
       hello: function (who) {
         return new Promise(function (resolve, reject) {
 
-          setTimeout(function () {
+          setTimeout(() => {
             resolve('hello ' + who + ' from node2')
           }, 1500)
         })
@@ -172,7 +172,7 @@ describe('Intercomm#exec', function () {
       type: 'client',
       apiVersion: '0.0.0',
       sendMessage: function (msg) {
-        node2.handleMessage(msg)
+        node2.handleMessage(msg.toJSON())
       },
     })
 
@@ -181,12 +181,12 @@ describe('Intercomm#exec', function () {
       type: 'server',
       apiVersion: '0.0.0',
       sendMessage: function (msg) {
-        node1.handleMessage(msg)
+        node1.handleMessage(msg.toJSON())
       },
     })
 
     node1.exec('node2', 'methodThatDoesNotExist', [])
-      .then(function () {
+      .then(() => {
         done(new Error('expected error'))
       })
       .catch(function (err) {
@@ -210,7 +210,7 @@ describe('Intercomm#exec', function () {
       type: 'client',
       apiVersion: '0.0.0',
       sendMessage: function (msg) {
-        node2.handleMessage(msg)
+        node2.handleMessage(msg.toJSON())
       },
     })
 
@@ -219,18 +219,18 @@ describe('Intercomm#exec', function () {
       type: 'server',
       apiVersion: '0.0.0',
       sendMessage: function (msg) {
-        node1.handleMessage(msg)
+        node1.handleMessage(msg.toJSON())
       },
     })
 
     node2.expose({
-      throwErrorMethod: function () {
+      throwErrorMethod: () => {
         throw new TypeError('some type error')
       },
     }, ['throwErrorMethod'])
 
     node1.exec('node2', 'throwErrorMethod')
-      .then(function () {
+      .then(() => {
         done(new Error('error expected'))
       }, function (err) {
         err.name.should.equal('TypeError')
@@ -260,7 +260,7 @@ describe('Intercomm#exec', function () {
       apiVersion: '0.0.0',
       // let node2 directly handle messages sent by node1
       sendMessage: function (msg) {
-        node2.handleMessage(msg)
+        node2.handleMessage(msg.toJSON())
       },
       requestTimeout: timeoutMs,
     })
@@ -271,7 +271,7 @@ describe('Intercomm#exec', function () {
       apiVersion: '0.0.0',
       // let node1 directly handle messages sent by node2
       sendMessage: function (msg) {
-        node1.handleMessage(msg)
+        node1.handleMessage(msg.toJSON())
       },
     })
 
@@ -280,7 +280,7 @@ describe('Intercomm#exec', function () {
       hello: function (who) {
         return new Promise(function (resolve, reject) {
 
-          setTimeout(function () {
+          setTimeout(() => {
             resolve('hello ' + who + ' from node2')
           }, timeoutMs + 100)
         })
@@ -308,7 +308,7 @@ describe('Intercomm#exec', function () {
     Object.keys(node1.requestManager.sentRequests).length.should.equal(1)
   })
 
-  it('should handle `sendMessage` synchronous error', function () {
+  it('should handle `sendMessage` synchronous error', () => {
 
     var _err
 
@@ -316,7 +316,7 @@ describe('Intercomm#exec', function () {
       id: 'node1',
       apiVersion: '0.0.0',
       type: 'client',
-      sendMessage: function () {
+      sendMessage: () => {
         _err = new Error('error sending message')
         throw _err
       },
@@ -334,7 +334,7 @@ describe('Intercomm#exec', function () {
       })
   })
 
-  it('should handle `sendMessage` asynchronous error', function () {
+  it('should handle `sendMessage` asynchronous error', () => {
 
     var _err
 
@@ -342,7 +342,7 @@ describe('Intercomm#exec', function () {
       id: 'node1',
       apiVersion: '0.0.0',
       type: 'client',
-      sendMessage: function () {
+      sendMessage: () => {
         return new Promise((resolve, reject) => {
           setTimeout(() => {
             _err = new Error('error sending message')
@@ -366,8 +366,8 @@ describe('Intercomm#exec', function () {
 
 })
 
-describe('Intercomm#expose', function () {
-  it('should expose specific methods to the ipc api', function () {
+describe('Intercomm#expose', () => {
+  it('should expose specific methods to the ipc api', () => {
     var node1 = new Intercomm({
       id: 'node1',
       type: 'server',
@@ -376,13 +376,13 @@ describe('Intercomm#expose', function () {
     })
 
     node1.expose({
-      someMethod: function () {}
+      someMethod: () => {}
     }, ['someMethod'])
 
     node1.api.someMethod.should.be.a.Function()
   })
 
-  it('should expose a full object of apis and exclude properties that are not functions', function () {
+  it('should expose a full object of apis and exclude properties that are not functions', () => {
     var node1 = new Intercomm({
       id: 'node1',
       type: 'server',
@@ -391,8 +391,8 @@ describe('Intercomm#expose', function () {
     })
 
     node1.expose({
-      method1: function () {},
-      method2: function () {},
+      method1: () => {},
+      method2: () => {},
 
       property: '1231203',
     }, [
@@ -406,15 +406,15 @@ describe('Intercomm#expose', function () {
     should(node1.api.property).be.undefined()
   })
 
-  it('should prevent exclusively-client nodes from exposing apis', function () {
+  it('should prevent exclusively-client nodes from exposing apis', () => {
     var node1 = new Intercomm({
       id: 'node1',
       apiVersion: '0.0.0',
       type: 'client',
-      sendMessage: function () {},
+      sendMessage: () => {},
     })
 
-    assert.throws(function () {
+    assert.throws(() => {
       node1.expose({
         someMethod: function() {}
       }, ['someMethod'])
@@ -479,4 +479,8 @@ describe('Intercomm#expose', function () {
     node1.api.someScopedAPI.deeperScope.method1.should.be.a.Function()
     node1.api.someScopedAPI.deeperScope.method2.should.be.a.Function()
   })
+})
+
+describe('Intercomm#loadResponseData', () => {
+
 })
