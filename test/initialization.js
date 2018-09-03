@@ -86,4 +86,12 @@ describe('Intercomm initialization', function () {
     sub.should.be.an.Object()
   })
 
+  it('should not allow `*` as id', () => {
+    assert.throws(() => {
+      new Intercomm(genOpts({
+        id: '*'
+      }))
+    }, '`*` is a reserved expression, thus not a valid id')
+  })
+
 })

@@ -29,7 +29,7 @@ describe('Intercomm#handleMessage', function () {
       sendMessage: function () {},
     })
 
-    node.on('some-event', function (data) {
+    node.on('*:some-event', function (data) {
       data.key.should.equal('value')
       done()
     })
