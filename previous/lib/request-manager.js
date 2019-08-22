@@ -25,7 +25,7 @@ class Request {
 			/**
 			 * The context refers to the Request instance
 			 */
-			
+
 			this._requestTimeoutId = setTimeout(() => {
 				this.reject(new RequestTimeoutError())
 			}, requestTimeout)
@@ -88,7 +88,7 @@ class RequestManager {
 
 	/**
 	 * Retrieves a request given its id
-	 * 
+	 *
 	 * @param  {String[uuid]} requestId
 	 * @return {Request}
 	 */
