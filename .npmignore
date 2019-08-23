@@ -4,3 +4,4 @@ rollup
 src
 test
 .babelrc
+sandbox
