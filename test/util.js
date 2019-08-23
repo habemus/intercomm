@@ -1,25 +1,29 @@
-import { intercomm } from '../src'
+// import { createClient, createServer } from '../src'
 
-export const makeNodes = (count, options = {}) => {
-  const nodes = {}
+// export const makeNodes = (count, options = {}) => {
+//   const nodes = {}
 
-  let nodeCount = count
+//   let nodeCount = count
 
-  while (nodeCount > 0) {
-    const id = `node${nodeCount}`
+//   while (nodeCount > 0) {
+//     const id = `node${nodeCount}`
 
-    nodes[id] = intercomm({
-      ...options,
-      id,
-      onSendMessage: message => nodes[message.destination].receiveMessage(message),
-    })
+//     nodes[id] = intercomm({
+//       ...options,
+//       id,
+//       onSendMessage: message => nodes[message.destination].receiveMessage(message),
+//     })
 
-    nodeCount --
-  }
+//     nodeCount --
+//   }
 
-  return nodes
+//   return nodes
+// }
+
+export const shouldHaveRejected = () => {
+  throw new Error('shouldHaveRejected')
 }
 
-export const shouldHaveThrown = () => {
-  throw new Error('shouldHaveThrown')
+export const createClientServerPair = () => {
+  return []
 }

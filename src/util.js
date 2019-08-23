@@ -43,25 +43,4 @@ export const validateParameters = parameters => {
   }
 }
 
-export const REQUEST_MESSAGE_TYPE = 'request'
-export const RESPONSE_MESSAGE_TYPE = 'response'
-export const EVENT_MESSAGE_TYPE = 'event'
-
-export const CLIENT_ROLE = 'client'
-export const SERVER_ROLE = 'server'
-
-export const requireClientRole = roles => {
-  if (!roles.includes(CLIENT_ROLE)) {
-    throw new Error(`${CLIENT_ROLE} role required`)
-  }
-}
-
-export const requireServerRole = roles => {
-  if (!roles.includes(SERVER_ROLE)) {
-    throw new Error(`${SERVER_ROLE} role required`)
-  }
-}
-
-export const setImmediate = setImmediate ? setImmediate : fn => setTimeout(fn, 0)
-
 export const noop = () => {}

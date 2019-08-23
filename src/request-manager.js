@@ -1,12 +1,6 @@
 import uuidv4 from 'uuid/v4'
 
-export class RequestTimeoutError extends Error {
-  constructor() {
-    super()
-
-    this.name = 'REQUEST_TIMEOUT'
-  }
-}
+import { RequestTimeoutError } from './errors'
 
 export class Request {
   constructor({ timeout = 1000, id = uuidv4() }) {
