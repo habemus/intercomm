@@ -1,4 +1,3 @@
-import uuidv4 from 'uuid/v4'
 import { Node } from './node'
 import { MESSAGE_TYPES } from './constants'
 
@@ -7,6 +6,7 @@ import {
   validateMethodName,
   validateParameters,
   promiseTry,
+  generateId,
 } from './util'
 
 export class Server extends Node {
@@ -50,7 +50,7 @@ export class Server extends Node {
       //
       Promise.resolve().then(() => {
         this.sendMessage({
-          id: uuidv4(),
+          id: generateId(),
           type: this.messageTypes.response,
           payload: {
             requestId,
@@ -65,7 +65,7 @@ export class Server extends Node {
     } else {
       promiseTry(fn, parameters).then(result => {
         this.sendMessage({
-          id: uuidv4(),
+          id: generateId(),
           type: this.messageTypes.response,
           payload: {
             requestId,
@@ -75,7 +75,7 @@ export class Server extends Node {
         }, source)
       }, error => {
         this.sendMessage({
-          id: uuidv4(),
+          id: generateId(),
           type: this.messageTypes.response,
           payload: {
             requestId,

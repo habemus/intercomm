@@ -1,7 +1,7 @@
-import uuidv4 from 'uuid/v4'
 import { Client } from './client'
 import { Server } from './server'
 import { MESSAGE_TYPES } from './constants'
+import { generateId } from './util'
 
 export const createClient = options => {
   return new Client(options)
@@ -11,7 +11,7 @@ export const createServer = options => {
   return new Server(options)
 }
 
-export const createClientAndServer = ({ id = uuidv4(), ...options }) => ({
+export const createClientAndServer = ({ id = generateId(), ...options }) => ({
   client: createClient({ ...options, id }),
   server: createServer({ ...options, id })
 })

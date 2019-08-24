@@ -1,9 +1,8 @@
-import uuidv4 from 'uuid/v4'
-
+import { generateId } from './util'
 import { RequestTimeoutError } from './errors'
 
 export class Request {
-  constructor({ timeout = 1000, id = uuidv4() }) {
+  constructor({ timeout = 1000, id = generateId() }) {
     this.id = id
 
     this.promise = new Promise((_resolve, _reject) => {
@@ -43,7 +42,7 @@ export class RequestManager {
    *
    * @param {String} id (optional)
    * @return {Request}
-   *         - id {String[uuidv4]}
+   *         - id {String[randomString]}
    *         - resolve {Function}
    *         - reject {Function}
    */
@@ -74,7 +73,7 @@ export class RequestManager {
   /**
    * Retrieves a request given its id
    *
-   * @param  {String[uuid]} requestId
+   * @param  {String[randomString]} requestId
    * @return {Request}
    */
   getRequest(requestId) {

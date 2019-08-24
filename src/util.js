@@ -44,3 +44,12 @@ export const validateParameters = parameters => {
 }
 
 export const noop = () => {}
+
+const getRandomInt = (min, max) => {
+  return Math.floor(Math.random() * (max - min)) + min
+}
+
+//
+// TODO: substitute for some uuid/v4 module.
+//
+export const generateId = () => getRandomInt(0, 9999999999)

@@ -1,9 +1,8 @@
-import uuidv4 from 'uuid/v4'
-
 import {
   validateId,
   promiseTry,
-  noop
+  noop,
+  generateId
 } from './util'
 
 import { SendMessageError } from './errors'
@@ -14,7 +13,7 @@ const logUnhandledMessage = message => {
 
 export class Node {
   constructor({
-    id = uuidv4(),
+    id = generateId(),
     onSendMessage,
     onUnhandledMessage = logUnhandledMessage,
     onAttachMessageListener = noop,

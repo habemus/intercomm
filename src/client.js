@@ -1,5 +1,3 @@
-import uuidv4 from 'uuid/v4'
-
 import {
   MESSAGE_TYPES
 } from './constants'
@@ -9,6 +7,7 @@ import {
   validateId,
   validateMethodName,
   validateParameters,
+  generateId,
 } from './util'
 
 import { RequestManager } from './request-manager'
@@ -47,7 +46,7 @@ export class Client extends Node {
     validateMethodName(method)
     validateParameters(parameters)
 
-    const requestId = uuidv4()
+    const requestId = generateId()
 
     const request = this.requestManager.registerRequest(requestId)
 
