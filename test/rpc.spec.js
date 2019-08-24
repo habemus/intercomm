@@ -5,7 +5,7 @@ import { shouldHaveRejected } from './util'
 
 describe('rpc', () => {
   test('using an EventEmitter as message broker', () => {
-    expect.assertions(1)
+    expect.assertions(2)
 
     const messageBroker = new EventEmitter()
 
@@ -26,8 +26,12 @@ describe('rpc', () => {
       }
     })
 
-    return client.request('SOME-SCOPE/METHOD-1', [100, 90]).then(res => {
-      expect(res).toEqual(190)
+    return Promise.all([
+      client.request('SOME-SCOPE/METHOD-1', [100, 90]),
+      client.request('HEARTBEAT'),
+    ]).then(([method1Res, hearbeatRes]) => {
+      expect(method1Res).toEqual(190)
+      expect(hearbeatRes.id).toEqual('server-1')
     })
   })
 })

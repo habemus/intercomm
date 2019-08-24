@@ -42,7 +42,7 @@ export class Client extends Node {
     })
   }
 
-  request(method, parameters) {
+  request(method, parameters = []) {
     validateMethodName(method)
     validateParameters(parameters)
 

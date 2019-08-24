@@ -12,9 +12,9 @@ import {
 /**
  * A basic method that helps debugging
  */
-const HEARTBEAT = request => {
+const makeHeartbeat = id => request => {
   return {
-    request,
+    id,
     timestamp: (new Date()).toISOString(),
   }
 }
@@ -42,7 +42,7 @@ export class Server extends Node {
     })
 
     this.methods = {
-      HEARTBEAT,
+      HEARTBEAT: makeHeartbeat(this.id),
       ...methods,
     }
     this.messageTypes = messageTypes
