@@ -9,6 +9,16 @@ import {
   generateId,
 } from './util'
 
+/**
+ * A basic method that helps debugging
+ */
+const HEARTBEAT = request => {
+  return {
+    request,
+    timestamp: (new Date()).toISOString(),
+  }
+}
+
 export class Server extends Node {
   constructor({
     methods = {},
@@ -31,7 +41,10 @@ export class Server extends Node {
         undefined,
     })
 
-    this.methods = methods
+    this.methods = {
+      HEARTBEAT,
+      ...methods,
+    }
     this.messageTypes = messageTypes
   }
 
