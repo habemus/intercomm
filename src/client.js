@@ -15,7 +15,8 @@ import { Node } from './node'
 
 export class Client extends Node {
   constructor({
-    defaultRequestTimeout = 1000,
+    timeout,
+    timeoutMaxRetryAtempts,
     messageTypes = MESSAGE_TYPES,
     onSendMessage,
     onAttachMessageListener,
@@ -38,27 +39,32 @@ export class Client extends Node {
     this.messageTypes = messageTypes
 
     this.requestManager = new RequestManager({
-      defaultRequestTimeout
+      timeout,
+      timeoutMaxRetryAtempts
     })
   }
 
-  request(method, parameters = []) {
+  request(method, parameters = [], requestOptions = {}) {
     validateMethodName(method)
     validateParameters(parameters)
 
     const requestId = generateId()
 
-    const request = this.requestManager.registerRequest(requestId)
-
-    return this.sendMessage({
+    const request = this.requestManager.createRequest(() => {
+      return this.sendMessage({
+        id: requestId,
+        type: this.messageTypes.request,
+        payload: {
+          method,
+          parameters,
+        }
+      })
+    }, {
+      ...requestOptions,
       id: requestId,
-      type: this.messageTypes.request,
-      payload: {
-        method,
-        parameters,
-      }
     })
-    .then(() => request.promise)
+
+    return request.attempt().then(() => request.promise)
   }
 
   receiveMessage(message) {

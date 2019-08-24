@@ -65,7 +65,7 @@ describe('client', () => {
 
       const client = createClient({
         id: 'client-1',
-        defaultRequestTimeout: 500,
+        defaultRequestTimeout: 100,
         onSendMessage: (type, message) => {}
       })
 

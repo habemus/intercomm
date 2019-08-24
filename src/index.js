@@ -30,3 +30,5 @@ export {
   Server,
   MESSAGE_TYPES
 }
+
+export * from './request-manager'

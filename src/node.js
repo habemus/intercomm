@@ -11,12 +11,17 @@ const logUnhandledMessage = message => {
   console.warn('Unhandled message:', message)
 }
 
+const logSendMessageError = error => {
+  console.warn('SendMessageError', error)
+}
+
 export class Node {
   constructor({
     id = generateId(),
     onSendMessage,
     onUnhandledMessage = logUnhandledMessage,
     onAttachMessageListener = noop,
+    onSendMessageError = logSendMessageError,
   }) {
     validateId(id)
 
@@ -27,6 +32,7 @@ export class Node {
     this.id = id
     this.onSendMessage = onSendMessage
     this.onUnhandledMessage = onUnhandledMessage
+    this.onSendMessageError = onSendMessageError
 
     onAttachMessageListener(this.receiveMessage.bind(this))
   }
@@ -42,6 +48,7 @@ export class Node {
       error => {
         // Do not allow consumer to have access
         // to the source error object
+        this.onSendMessageError(error)
         throw new SendMessageError()
       }
     )
