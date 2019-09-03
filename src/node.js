@@ -5,23 +5,24 @@ import {
   generateId
 } from './util'
 
+import { MESSAGE_TYPES } from './constants'
 import { SendMessageError } from './errors'
+import { TaskManager } from './task-manager'
 
 const logUnhandledMessage = message => {
-  console.warn('Unhandled message:', message)
-}
-
-const logSendMessageError = error => {
-  console.warn('SendMessageError', error)
+  console.warn('UNHANDLED_MESSAGE', message)
 }
 
 export class Node {
   constructor({
     id = generateId(),
     onSendMessage,
+    onReceiveMessage = noop,
+    messageTypes = MESSAGE_TYPES,
     onUnhandledMessage = logUnhandledMessage,
-    onAttachMessageListener = noop,
-    onSendMessageError = logSendMessageError,
+    onAttachListener = noop,
+
+    timeout,
   }) {
     validateId(id)
 
@@ -29,28 +30,72 @@ export class Node {
       throw new TypeError('onSendMessage MUST be a function')
     }
 
+    this.messageTypes = messageTypes
+
     this.id = id
     this.onSendMessage = onSendMessage
     this.onUnhandledMessage = onUnhandledMessage
-    this.onSendMessageError = onSendMessageError
 
-    onAttachMessageListener(this.receiveMessage.bind(this))
+    this.taskManager = new TaskManager({
+      timeout,
+    })
+
+    onAttachListener(this.receiveMessage.bind(this))
   }
 
-  sendMessage(message, destination) {
-    return promiseTry(this.onSendMessage, [{
+  ackMessage(message) {
+    return this.sendMessage({
+      type: this.messageTypes.ack,
+      payload: message.id,
+      destination: message.source,
+    })
+  }
+
+  sendMessage({ id = generateId(), ...message }, sendMessageRequestOptions) {
+
+    message = {
       ...message,
+      id,
       source: this.id,
-      destination,
-    }])
-    .then(
-      () => undefined,
-      error => {
-        // Do not allow consumer to have access
-        // to the source error object
-        this.onSendMessageError(error)
-        throw new SendMessageError()
+    }
+
+    const task = this.taskManager.create(() => {
+      this.onSendMessage(message)
+    }, {
+      ...sendMessageRequestOptions,
+      id,
+      metadata: {
+        taskType: 'SEND_MESSAGE',
+        message,
       }
-    )
+    })
+
+    return task.attempt()
+  }
+
+  /**
+   * Resolves the corresponding sendMessage task
+   */
+  receiveAck(message) {
+    const task = this.taskManager.get(message.payload)
+
+    if (task) {
+      task.resolve()
+    } else {
+      this.onUnhandledMessage(message)
+    }
+
+    return true
+  }
+
+  receiveMessage(message) {
+    if (message.type === this.messageTypes.ack) {
+      return this.receiveAck(message)
+    } else {
+      this.ackMessage(message)
+      return false
+    }
   }
 }
+
+export const createNode = options => new Node(options)

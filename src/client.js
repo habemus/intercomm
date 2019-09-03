@@ -3,71 +3,49 @@ import {
 } from './constants'
 
 import {
-  promiseTry,
   validateId,
   validateMethodName,
   validateParameters,
+  noop,
   generateId,
 } from './util'
 
-import { RequestManager } from './request-manager'
 import { Node } from './node'
 
 export class Client extends Node {
-  constructor({
-    timeout,
-    timeoutMaxRetryAtempts,
-    messageTypes = MESSAGE_TYPES,
-    onSendMessage,
-    onAttachMessageListener,
-    ...options
-  }) {
-    super({
-      ...options,
-      onSendMessage: message => onSendMessage(
-        messageTypes.request,
-        message
-      ),
-      onAttachMessageListener: onAttachMessageListener ?
-        listener => onAttachMessageListener(
-          messageTypes.response,
-          listener
-        ) :
-        undefined,
-    })
-
-    this.messageTypes = messageTypes
-
-    this.requestManager = new RequestManager({
-      timeout,
-      timeoutMaxRetryAtempts
-    })
-  }
-
-  request(method, parameters = [], requestOptions = {}) {
+  request(method, parameters = [], {
+    requestOptions,
+    messageOptions
+  } = {}) {
     validateMethodName(method)
     validateParameters(parameters)
 
-    const requestId = generateId()
+    const requestId = generateId(this.messageTypes.request)
 
-    const request = this.requestManager.createRequest(() => {
-      return this.sendMessage({
+    return this.sendMessage({
+      type: this.messageTypes.request,
+      payload: {
+        requestId,
+        method,
+        parameters
+      }
+    }, messageOptions)
+    .then(() => {
+      const request = this.taskManager.create(noop, {
+        ...requestOptions,
         id: requestId,
-        type: this.messageTypes.request,
-        payload: {
+        metadata: {
+          requestType: 'RPC_REQUEST',
           method,
           parameters,
         }
       })
-    }, {
-      ...requestOptions,
-      id: requestId,
-    })
 
-    return request.attempt().then(() => request.promise)
+      return request.attempt()
+    })
   }
 
-  receiveMessage(message) {
+  receiveResponse(message) {
     const {
       payload: {
         requestId,
@@ -78,7 +56,7 @@ export class Client extends Node {
 
     validateId(requestId)
 
-    const request = this.requestManager.getRequest(requestId)
+    const request = this.taskManager.get(requestId)
 
     if (!request) {
       // Ignore requests that were not found
@@ -93,4 +71,17 @@ export class Client extends Node {
       request.resolve(result)
     }
   }
+
+  receiveMessage(message) {
+    if (super.receiveMessage(message)) {
+      return true
+    } else if (message.type === this.messageTypes.response) {
+      return this.receiveResponse(message)
+    } else {
+      return false
+    }
+
+  }
 }
+
+export const createClient = options => new Client(options)

@@ -1,63 +1,39 @@
 import { createClient } from '../src'
 
-import { shouldHaveRejected } from './util'
+import { shouldHaveRejected, noop } from './util'
 
 describe('client', () => {
   describe('client#request(method, parameters)', () => {
-    test('message format', done => {
-      expect.assertions(4)
+    test('message format', () => {
+      expect.assertions(5)
 
       const client = createClient({
         id: 'client-1',
-        onSendMessage: (type, message) => {
-          expect(type).toEqual('rpc-request')
+        onSendMessage: message => {
           expect(message.type).toEqual('rpc-request')
+          expect(message.id).toEqual(expect.any(String))
           expect(message.payload).toEqual({
             method: 'someMethod',
             parameters: ['parameter-1', 'parameter-2']
           })
           expect(message.source).toEqual('client-1')
 
-          done()
-        }
-      })
-
-      client.request('someMethod', ['parameter-1', 'parameter-2'])
-    })
-
-    test('rejects with SendMessageError error upon onSendMessage sync error', () => {
-      expect.assertions(2)
-
-      const client = createClient({
-        id: 'client-1',
-        onSendMessage: (type, message) => {
-          throw new Error('Some API error')
+          client.receiveMessage({
+            id: 'response-message-id',
+            type: 'rpc-response',
+            payload: {
+              requestId: message.id,
+              result: 'Hey',
+              error: false
+            }
+          })
         }
       })
 
       return client.request('someMethod', ['parameter-1', 'parameter-2'])
-        .then(shouldHaveRejected, err => {
-          expect(err.message).toEqual('SEND_MESSAGE_ERROR')
-          expect(err.name).toEqual('SEND_MESSAGE_ERROR')
+        .then(result => {
+          expect(result).toEqual('Hey')
         })
-    })
-
-    test('rejects with SendMessageError error upon onSendMessage async error', () => {
-      expect.assertions(2)
-
-      const client = createClient({
-        id: 'client-1',
-        onSendMessage: (type, message) => {
-          return new Promise((resolve, reject) => setTimeout(reject, 100))
-        }
-      })
-
-      return client.request('someMethod', ['parameter-1', 'parameter-2'])
-        .then(shouldHaveRejected, err => {
-          expect(err.message).toEqual('SEND_MESSAGE_ERROR')
-          expect(err.name).toEqual('SEND_MESSAGE_ERROR')
-        })
-
     })
 
     test('rejects with timeout if the request takes too long', () => {
@@ -66,7 +42,7 @@ describe('client', () => {
       const client = createClient({
         id: 'client-1',
         defaultRequestTimeout: 100,
-        onSendMessage: (type, message) => {}
+        onSendMessage: message => {}
       })
 
       return client.request('someMethod', [])
@@ -77,12 +53,12 @@ describe('client', () => {
     })
   })
 
-  describe('client#receiveMessage(message)', () => {
+  describe.skip('client#receiveMessage(message)', () => {
     test('resolves pending request', () => {
       expect.assertions(2)
 
       const client = createClient({
-        onSendMessage: (type, message) => {}
+        onSendMessage: message => {}
       })
 
       setTimeout(() => {
@@ -108,7 +84,7 @@ describe('client', () => {
       expect.assertions(3)
 
       const client = createClient({
-        onSendMessage: (type, message) => {}
+        onSendMessage: message => {}
       })
 
       setTimeout(() => {

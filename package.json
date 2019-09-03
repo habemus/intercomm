@@ -6,7 +6,7 @@
   "module": "dist/index.mjs",
   "scripts": {
     "test": "jest",
-    "dev-test": "jest --watch",
+    "test-watch": "jest --watch",
     "build": "rm -rf dist && rollup --config ./rollup.config.js",
     "prepublish": "npm run build"
   },

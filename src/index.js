@@ -1,15 +1,7 @@
-import { Client } from './client'
-import { Server } from './server'
+import { createClient } from './client'
+import { createServer } from './server'
 import { MESSAGE_TYPES } from './constants'
 import { generateId } from './util'
-
-export const createClient = options => {
-  return new Client(options)
-}
-
-export const createServer = options => {
-  return new Server(options)
-}
 
 export const createClientAndServer = ({ id = generateId(), ...options }) => ({
   client: createClient({ ...options, id }),
@@ -26,9 +18,10 @@ export const createClientProxy = (client, methods) => {
 }
 
 export {
-  Client,
-  Server,
   MESSAGE_TYPES
 }
 
-export * from './request-manager'
+export * from './node'
+export * from './server'
+export * from './client'
+export * from './task-manager'

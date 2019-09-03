@@ -1,15 +1,35 @@
-export class SendMessageError extends Error {
-  constructor() {
-    super('SEND_MESSAGE_ERROR')
+export class TimeoutError extends Error {
+  constructor(data) {
+    super('Timed out')
 
-    this.name = 'SEND_MESSAGE_ERROR'
+    this.name = 'TIMEOUT_ERROR'
+    this.data = data
   }
 }
 
-export class RequestTimeoutError extends Error {
-  constructor() {
-    super('REQUEST_TIMEOUT_ERROR')
+export class CancelError extends Error {
+  constructor(reason) {
+    super(reason ? `Cancelled: ${reason}` : 'Cancelled')
 
-    this.name = 'REQUEST_TIMEOUT_ERROR'
+    this.name = 'CANCEL_ERROR'
+    this.reason = reason
+  }
+}
+
+export class MaxAttemptsReachedError extends Error {
+  constructor() {
+    super('Max attempts reached')
+
+    this.name = 'MAX_ATTEMPTS_REACHED_ERROR'
+  }
+}
+
+
+export class MethodNotDefinedError extends Error {
+  constructor(methodName) {
+    super(`Method '${methodName}' is not defined`)
+
+    this.name = 'METHOD_NOT_DEFINED_ERROR'
+    this.methodName = methodName
   }
 }

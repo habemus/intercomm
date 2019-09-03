@@ -1,4 +1,5 @@
 export const MESSAGE_TYPES = {
-  request: 'rpc-request',
-  response: 'rpc-response'
+  request: 'request',
+  response: 'response',
+  ack: 'ack',
 }

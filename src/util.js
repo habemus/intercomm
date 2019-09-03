@@ -52,4 +52,6 @@ const getRandomInt = (min, max) => {
 //
 // TODO: substitute for some uuid/v4 module.
 //
-export const generateId = () => getRandomInt(0, 9999999999)
+export const generateId = prefix => prefix
+  ? `${prefix}-${getRandomInt(0, 9999999999).toString()}`
+  : getRandomInt(0, 9999999999).toString()

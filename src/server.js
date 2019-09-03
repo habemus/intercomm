@@ -7,103 +7,97 @@ import {
   validateParameters,
   promiseTry,
   generateId,
+  noop,
 } from './util'
-
-/**
- * A basic method that helps debugging
- */
-const makeHeartbeat = id => request => {
-  return {
-    id,
-    timestamp: (new Date()).toISOString(),
-  }
-}
 
 export class Server extends Node {
   constructor({
-    methods = {},
-    messageTypes = MESSAGE_TYPES,
-    onSendMessage,
-    onAttachMessageListener,
+    methods,
     ...options
   }) {
-    super({
-      ...options,
-      onSendMessage: message => onSendMessage(
-        messageTypes.response,
-        message
-      ),
-      onAttachMessageListener: onAttachMessageListener ?
-        listener => onAttachMessageListener(
-          messageTypes.request,
-          listener
-        ) :
-        undefined,
-    })
+    super(options)
 
-    this.methods = {
-      HEARTBEAT: makeHeartbeat(this.id),
-      ...methods,
-    }
-    this.messageTypes = messageTypes
+    this.methods = methods
   }
 
-  receiveMessage({ id: requestId, source, payload: { method, parameters } }) {
+  receiveRequest({ source, payload: { requestId, method, parameters } }) {
     validateId(requestId)
     validateId(source)
     validateMethodName(method)
     validateParameters(parameters)
 
-    const fn = this.methods[method]
+    const onSuccess = result => {
+      this.sendMessage({
+        type: this.messageTypes.response,
+        payload: {
+          requestId,
+          result,
+          error: false
+        }
+      }, source)
+    }
 
-    if (typeof fn !== 'function') {
+    const onError = error => {
+      this.sendMessage({
+        type: this.messageTypes.response,
+        payload: {
+          requestId,
+          result: error,
+          error: error.name || 'Error',
+        }
+      }, source)
+    }
+
+    let task = this.taskManager.get(requestId)
+
+    if (!task) {
       //
-      // Wrap in Promise.resolve() so that
-      // message is never sent synchronously
+      // Refers to a new request
       //
-      Promise.resolve().then(() => {
-        this.sendMessage({
-          id: generateId(),
-          type: this.messageTypes.response,
-          payload: {
-            requestId,
-            result: {
-              name: 'METHOD_NOT_DEFINED_ERROR',
-              message: `Method '${method}' is not defined`,
-            },
-            error: 'METHOD_NOT_DEFINED_ERROR'
-          }
-        }, source)
+      task = this.taskManager.create(noop, {
+        id: requestId
       })
+
+      const fn = this.methods[method]
+
+      if (typeof fn !== 'function') {
+        task.reject(new MethodNotDefinedError(method))
+      } else {
+        promiseTry(fn, parameters).then(
+          result => task.resolve(result),
+          error => task.reject(error)
+        )
+      }
+    }
+
+    //
+    // The request has already been received and is in execution
+    // Wait for the request to be resolved.
+    //
+    task.promise.then(onSuccess, onError)
+
+    return true
+  }
+
+  receiveMessage(message) {
+    if (super.receiveMessage(message)) {
+      return true
+    } else if (message.type === this.messageTypes.request) {
+      return this.receiveRequest(message)
     } else {
-      promiseTry(fn, parameters).then(result => {
-        this.sendMessage({
-          id: generateId(),
-          type: this.messageTypes.response,
-          payload: {
-            requestId,
-            result,
-            error: false
-          }
-        }, source)
-      }, error => {
-        this.sendMessage({
-          id: generateId(),
-          type: this.messageTypes.response,
-          payload: {
-            requestId,
-            result: error,
-            error: error.name || 'Error',
-          }
-        }, source)
-      })
+      return false
     }
   }
 
   expose(methods) {
-    this.methods = {
-      ...this.methods,
-      ...methods
-    }
+    Object.keys(methods).forEach(methodName => {
+      if (this.methods[methodName]) {
+        console.warn(`Overwriting method: ${methodName}`)
+      }
+
+      this.methods[methodName] = methods[methodName]
+    })
   }
 }
+
+export const createServer = options => new Server(options)
