@@ -450,8 +450,8 @@ describe('Task', () => {
     })
   })
 
-  describe('getPromise()', () => {
-    test('should return a promise that is resolved according to task completion', () => {
+  describe('promise', () => {
+    test('async task resolution', () => {
       expect.assertions(1)
       const task = new Task()
 
@@ -462,7 +462,7 @@ describe('Task', () => {
       })
     })
 
-    test('should return a promise that is rejected according to task completion', () => {
+    test('async task rejection', () => {
       expect.assertions(1)
       const task = new Task()
 
@@ -472,6 +472,51 @@ describe('Task', () => {
         unexpectedBehavior('Should have rejected'),
         error => expect(error.message).toEqual('SOME_ERROR')
       )
+    })
+
+    test('sync task resolution', () => {
+      expect.assertions(1)
+      const task = new Task()
+
+      task.resolve('EXPECTED_RESULT')
+
+      return task.promise.then(result => {
+        expect(result).toEqual('EXPECTED_RESULT')
+      })
+    })
+
+    test('sync task rejection', () => {
+      expect.assertions(1)
+      const task = new Task()
+
+      task.reject(new Error('SOME_ERROR'))
+
+      return task.promise.then(
+        unexpectedBehavior('Should have rejected'),
+        error => expect(error.message).toEqual('SOME_ERROR')
+      )
+    })
+
+    describe('then(onSuccess, onError)', () => {
+      test('should proxy then call to the promise (onSuccess)', () => {
+        expect.assertions(1)
+        const task = new Task()
+
+        task.resolve('EXPECTED_RESULT')
+
+        return expect(task).resolves.toEqual('EXPECTED_RESULT')
+      })
+
+      test('should proxy then call to the promise (onError)', () => {
+        expect.assertions(1)
+        const task = new Task()
+
+        const err = new Error('SOME_ERROR')
+
+        task.reject(err)
+
+        return expect(task).rejects.toEqual(err)
+      })
     })
   })
 })

@@ -21,8 +21,6 @@ export class Node {
     messageTypes = MESSAGE_TYPES,
     onUnhandledMessage = logUnhandledMessage,
     onAttachListener = noop,
-
-    timeout,
   }) {
     validateId(id)
 
@@ -36,9 +34,7 @@ export class Node {
     this.onSendMessage = onSendMessage
     this.onUnhandledMessage = onUnhandledMessage
 
-    this.taskManager = new TaskManager({
-      timeout,
-    })
+    this.taskManager = new TaskManager()
 
     onAttachListener(this.receiveMessage.bind(this))
   }
@@ -59,28 +55,27 @@ export class Node {
       source: this.id,
     }
 
-    const task = this.taskManager.create(() => {
-      this.onSendMessage(message)
-    }, {
-      ...sendMessageRequestOptions,
+    const sendMessageTask = this.taskManager.create({
       id,
       metadata: {
         taskType: 'SEND_MESSAGE',
-        message,
+        message
       }
     })
 
-    return task.attempt()
+    this.onSendMessage(message)
+
+    return sendMessageTask
   }
 
   /**
    * Resolves the corresponding sendMessage task
    */
   receiveAck(message) {
-    const task = this.taskManager.get(message.payload)
+    const sendMessageTask = this.taskManager.get(message.payload)
 
-    if (task) {
-      task.resolve()
+    if (sendMessageTask) {
+      sendMessageTask.resolve()
     } else {
       this.onUnhandledMessage(message)
     }

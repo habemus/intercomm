@@ -75,14 +75,34 @@ export class Task extends EventEmitter {
 
   /**
    * Promise interface representing completion of the task
+   *
+   * https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Functions/get#Smart_self-overwriting_lazy_getters
    */
   get promise() {
-    this._promise = this._promise ? this._promise : new Promise((resolve, reject) => {
-      this.once('resolved', resolve)
-      this.once('rejected', reject)
-    })
+    return this._promise = this._promise ? this._promise : new Promise((resolve, reject) => {
 
-    return this._promise
+      switch (this.status) {
+        case TASK_STATUS_RESOLVED:
+          resolve(this.result)
+        case TASK_STATUS_REJECTED:
+          reject(this.error)
+        default:
+          this.once('resolved', resolve)
+          this.once('rejected', reject)
+      }
+    })
+  }
+
+  get then() {
+    return this.promise.then.bind(this.promise)
+  }
+
+  get catch() {
+    return this.promise.catch.bind(this.promise)
+  }
+
+  get finally() {
+    return this.promise.finally.bind(this.promise)
   }
 
   clearTimeouts() {
@@ -139,7 +159,9 @@ export class Task extends EventEmitter {
     }
 
     this.clearTimeouts()
+    this.result = result
     this.status = TASK_STATUS_RESOLVED
+
     this.emit(TASK_RESOLVED, result)
     this.emit(TASK_FINISHED)
   }
@@ -150,7 +172,9 @@ export class Task extends EventEmitter {
     }
 
     this.clearTimeouts()
+    this.error = error
     this.status = TASK_STATUS_REJECTED
+
     this.emit(TASK_REJECTED, error)
     this.emit(TASK_FINISHED)
   }
