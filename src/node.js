@@ -21,6 +21,8 @@ export class Node {
     messageTypes = MESSAGE_TYPES,
     onUnhandledMessage = logUnhandledMessage,
     onAttachListener = noop,
+
+    sendMessageDefaultOptions = {}
   }) {
     validateId(id)
 
@@ -33,21 +35,27 @@ export class Node {
     this.id = id
     this.onSendMessage = onSendMessage
     this.onUnhandledMessage = onUnhandledMessage
+    this.sendMessageDefaultOptions = sendMessageDefaultOptions
 
     this.taskManager = new TaskManager()
 
     onAttachListener(this.receiveMessage.bind(this))
   }
 
-  ackMessage(message) {
-    return this.sendMessage({
+  acknowledgeMessageReceived(message) {
+    //
+    // Ensure onSendMessage is always called on next tick
+    //
+    Promise.resolve().then(() => this.onSendMessage({
       type: this.messageTypes.ack,
+      id: generateId(this.messageTypes.ack),
       payload: message.id,
       destination: message.source,
-    })
+      source: this.id,
+    }))
   }
 
-  sendMessage({ id = generateId(), ...message }, sendMessageRequestOptions) {
+  sendMessage({ id = generateId(), ...message }, sendMessageOptions) {
 
     message = {
       ...message,
@@ -56,6 +64,8 @@ export class Node {
     }
 
     const sendMessageTask = this.taskManager.create({
+      ...this.sendMessageDefaultOptions,
+      ...sendMessageOptions,
       id,
       metadata: {
         taskType: 'SEND_MESSAGE',
@@ -63,7 +73,10 @@ export class Node {
       }
     })
 
-    this.onSendMessage(message)
+    //
+    // Ensure onSendMessage is always called on next tick
+    //
+    Promise.resolve().then(() => this.onSendMessage(message))
 
     return sendMessageTask
   }
@@ -87,7 +100,7 @@ export class Node {
     if (message.type === this.messageTypes.ack) {
       return this.receiveAck(message)
     } else {
-      this.ackMessage(message)
+      this.acknowledgeMessageReceived(message)
       return false
     }
   }

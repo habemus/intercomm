@@ -13,36 +13,59 @@ import {
 import { Node } from './node'
 
 export class Client extends Node {
-  request(method, parameters = [], {
-    requestOptions,
-    messageOptions
-  } = {}) {
+  constructor({
+    defaultRequestOptions = {},
+    ...options
+  }) {
+    super(options)
+
+    this.defaultRequestOptions = defaultRequestOptions
+  }
+
+  request(method, parameters = [], { sendMessageOptions = {}, requestOptions = {} } = {}) {
     validateMethodName(method)
     validateParameters(parameters)
 
     const requestId = generateId(this.messageTypes.request)
 
-    return this.sendMessage({
+    const sendMessageTask = this.sendMessage({
       type: this.messageTypes.request,
       payload: {
         requestId,
         method,
         parameters
       }
-    }, messageOptions)
-    .then(() => {
-      const request = this.taskManager.create(noop, {
-        ...requestOptions,
-        id: requestId,
-        metadata: {
-          requestType: 'RPC_REQUEST',
-          method,
-          parameters,
-        }
-      })
+    }, sendMessageOptions)
 
-      return request.attempt()
+    /**
+     * Task representing the rpc request.
+     * Will be solved when a response message is received.
+     */
+    const requestTask = this.taskManager.create({
+      ...this.defaultRequestOptions,
+      ...requestOptions,
+      id: requestId,
+      metadata: {
+        taskType: 'RPC_REQUEST',
+        method,
+        parameters,
+      },
+      dependencies: [sendMessageTask]
     })
+
+    //
+    // Ensure sendMessageTask is cancelled upon finishing of the requestTask. E.g.:
+    // - requestTask has timed out
+    // - requestTask has been canceled
+    //
+    requestTask.once('finished', () => sendMessageTask.cancel())
+
+    //
+    // Start the timeout timer
+    //
+    requestTask.startAttempting()
+
+    return requestTask
   }
 
   receiveResponse(message) {
@@ -80,7 +103,6 @@ export class Client extends Node {
     } else {
       return false
     }
-
   }
 }
 

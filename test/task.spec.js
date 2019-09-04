@@ -519,4 +519,42 @@ describe('Task', () => {
       })
     })
   })
+
+  describe('cancel(Error ?)', () => {
+    test('resolves the task', () => {
+      expect.assertions(1)
+      const task = new Task()
+
+      task.cancel()
+
+      return expect(task).resolves.toEqual(undefined)
+    })
+
+    test('rejects the task if given an error', () => {
+      expect.assertions(1)
+      const task = new Task()
+
+      const err = new Error('SOME_ERROR')
+
+      task.cancel(err)
+
+      return expect(task).rejects.toEqual(err)
+    })
+  })
+
+  describe('new Task({ dependencies: [Task] })', () => {
+    test('dependant task is rejected if any of its dependencies is rejected', () => {
+      const err = new Error('SOME_ERROR')
+      const dependency1 = new Task()
+      const dependency2 = new Task()
+
+      const dependant = new Task({
+        dependencies: [dependency1, dependency2]
+      })
+
+      setTimeout(() => dependency1.reject(err), 100)
+
+      return expect(dependant).rejects.toEqual(err)
+    })
+  })
 })

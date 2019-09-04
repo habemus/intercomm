@@ -32,6 +32,7 @@ export class Task extends EventEmitter {
     maxAttempts = 1,
     timeout = 1000,
     backoff = backoffExponential(),
+    dependencies = [],
     metadata,
   } = {}) {
     super()
@@ -71,6 +72,25 @@ export class Task extends EventEmitter {
      * - rejected
      */
     this.status = TASK_STATUS_IDLE
+
+    /**
+     * Tasks on which this task depend on.
+     *
+     * If any of the dependency tasks are rejected,
+     * the dependant (this) will be rejected as well.
+     *
+     * If the dependant task (this) is finished before
+     * the dependencies, the dependency tasks are cancelled.
+     */
+    this.dependencies = dependencies
+
+    this.dependencies.forEach(dep => {
+      if (!(dep instanceof Task)) {
+        throw new TypeError('Dependencies must be instances of Task')
+      }
+
+      dep.on('rejected', err => this.reject(err))
+    })
   }
 
   /**
@@ -149,8 +169,14 @@ export class Task extends EventEmitter {
     }, this.timeout)
   }
 
-  cancel(reason) {
-    this.reject(new CancelError(reason))
+  cancel(error = null) {
+    if (this.status !== TASK_STATUS_RESOLVED && this.status !== TASK_STATUS_REJECTED) {
+      if (error instanceof Error) {
+        this.reject(error)
+      } else {
+        this.resolve()
+      }
+    }
   }
 
   resolve(result) {
