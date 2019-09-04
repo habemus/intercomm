@@ -24,9 +24,7 @@ export const unexpectedBehavior = message => () => {
   throw new Error('Unexpected behavior: ' + message)
 }
 
-export const shouldHaveRejected = () => {
-  throw new Error('shouldHaveRejected')
-}
+export const shouldHaveRejected = unexpectedBehavior('Should have rejected')
 
 export const createClientServerPair = () => {
   return []
