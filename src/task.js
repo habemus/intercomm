@@ -26,31 +26,68 @@ export const backoffFromValues = values => retryAttemptCount => values[Math.min(
   retryAttemptCount
 )]
 
+const defaultBackoff = backoffExponential()
+
+export const processTask = (task, {
+  now = Date.now(),
+  backoff = defaultBackoff,
+}) => {
+  const { attemtps, maxAttempts, timeout } = task
+  const lastAttempt = attemtps[attemtps.length - 1]
+
+  switch (task.status) {
+    case TASK_STATUS_IN_PROGRESS: {
+      const timeSinceLastAttempt = now - lastAttempt.time
+      if (timeSinceLastAttempt >= timeout) {
+        if (attemtps.length < maxAttempts) {
+          //
+          // Should retry
+          //
+          if (timeSinceLastAttempt >= timeout + backoff(attemtps.length)) {
+            task.attempt()
+          }
+        } else {
+          //
+          // Timeout
+          //
+          task.reject(new TimeoutError())
+        }
+      }
+      break
+    }
+    default:
+      break
+  }
+}
+
 export class Task extends EventEmitter {
   constructor({
-    id = generateId(),
+    id = generateId('task'),
+    createdAt = Date.now(),
+    attempts = [],
     maxAttempts = 1,
     timeout = 1000,
-    backoff = backoffExponential(),
     dependencies = [],
     metadata,
   } = {}) {
     super()
 
+    /**
+     * Identifier of the task
+     */
     this.id = id
-    this.maxAttempts = maxAttempts
-    this.timeout = timeout
-    this.backoff = Array.isArray(backoff)
-      ? backoffFromValues(backoff)
-      : typeof backoff === 'number'
-        ? () => backoff
-        : backoff
-    this.metadata = metadata
 
     /**
-     * Number of attempts
+     * Milliseconds for task timeout
+     * @type {Number}
      */
-    this.attemptCount = 0
+    this.timeout = timeout
+
+    /**
+     * Attempts
+     */
+    this.attempts = attempts
+    this.maxAttempts = maxAttempts
 
     /**
      * ID that refers to the setTimeout call
@@ -125,48 +162,23 @@ export class Task extends EventEmitter {
     return this.promise.finally.bind(this.promise)
   }
 
-  clearTimeouts() {
-    if (this.currentAttemptTimeoutId) {
-      clearTimeout(this.currentAttemptTimeoutId)
-      this.currentAttemptTimeoutId = null
-    }
-
-    if (this.retryBackoffTimeoutId) {
-      clearTimeout(this.retryBackoffTimeoutId)
-      this.retryBackoffTimeoutId = null
-    }
-  }
-
-  attempt(...args) {
+  attempt() {
     if (this.status !== TASK_STATUS_IDLE && this.status !== TASK_STATUS_IN_PROGRESS) {
       throw new Error('Task cannot be attempted from current status')
     }
 
-    if (this.attemptCount < this.maxAttempts) {
+    if (this.attempts.length < this.maxAttempts) {
+      const attempt = {
+        number: this.attempts.length,
+        time: Date.now()
+      }
+
       this.status = TASK_STATUS_IN_PROGRESS
-      this.emit(TASK_ATTEMPT, this.attemptCount, ...args)
-      this.attemptCount++
+      this.emit(TASK_ATTEMPT, attempt)
+      this.attempts = [...this.attempts, attempt]
     } else {
       this.reject(new MaxAttemptsReachedError())
     }
-  }
-
-  startAttempting(...args) {
-    this.clearTimeouts()
-    this.attempt(...args)
-
-    this.currentAttemptTimeoutId = setTimeout(() => {
-      // current attempt timed out
-      if (this.attemptCount < this.maxAttempts) {
-        // retry in...
-        this.retryBackoffTimeoutId = setTimeout(
-          () => this.startAttempting(...args),
-          this.backoff(this.attemptCount - 1)
-        )
-      } else {
-        this.reject(new TimeoutError())
-      }
-    }, this.timeout)
   }
 
   cancel(error = null) {
@@ -184,7 +196,6 @@ export class Task extends EventEmitter {
       throw new Error('Task cannot be resolved from current status')
     }
 
-    this.clearTimeouts()
     this.result = result
     this.status = TASK_STATUS_RESOLVED
 
@@ -197,7 +208,6 @@ export class Task extends EventEmitter {
       throw new Error('Task cannot be rejected from current status')
     }
 
-    this.clearTimeouts()
     this.error = error
     this.status = TASK_STATUS_REJECTED
 
