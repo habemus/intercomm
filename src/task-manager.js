@@ -1,9 +1,109 @@
-import { Task, TASK_FINISHED } from './task'
+import {
+  Task,
+  TASK_FINISHED,
+  processTask,
+} from './task'
+
+import { backoffExponential } from './backoff-algorithms'
+
+import {
+  TaskDroppedError
+} from './errors'
+
+const logTaskDropped = task => {
+  console.warn('Task dropped', task)
+}
 
 export class TaskManager {
-  constructor(taskDefaultOptions) {
+  constructor({
+    tasks = {},
+    backoff = backoffExponential(),
+    taskProcessingInterval = 100,
+    taskDefaultOptions = {},
+
+    maxTasks = 10,
+    onTaskDropped = logTaskDropped,
+  } = {}) {
+    /**
+     * Registered tasks will be processed
+     * every `taskProcessingInterval` ms
+     * @type {Number}
+     */
+    this.taskProcessingInterval = taskProcessingInterval
+    this.taskProcessingIntervalId = null
+
+    /**
+     * Backoff algorithm
+     */
+    this.backoff = backoff
+
+    /**
+     * Default options to be used for task creation
+     */
     this.taskDefaultOptions = taskDefaultOptions
-    this.tasks = {}
+
+    /**
+     * Map of tasks by id
+     *
+     * @type {Array}
+     */
+    this.tasks = Object.keys(tasks).reduce((acc, taskId) => {
+      const taskSpec = tasks[taskId]
+
+      return {
+        ...acc,
+        [taskId]: taskSpec instanceof Task ? taskSpec : new Task(taskSpec)
+      }
+    },{})
+
+    /**
+     * Max quantity of tasks allowed to be executed in parallel.
+     * Used to avoid memory leaking.
+     */
+    this.maxTasks = maxTasks
+    this.onTaskDropped = onTaskDropped
+  }
+
+  get taskCount() {
+    return Object.keys(this.tasks).length
+  }
+
+  dropTask(taskId) {
+    const task = this.getTask(taskId)
+
+    this.onTaskDropped(task)
+    task.cancel(new TaskDroppedError())
+  }
+
+  processTasks(now = Date.now()) {
+    const taskIds = Object.keys(this.tasks)
+    const taskCount = taskIds.length
+    const toDropIds = taskIds.slice(0, taskCount - this.maxTasks)
+    const toProcessIds = taskIds.slice(taskCount - this.maxTasks, taskCount)
+
+    toDropIds.forEach(taskId => this.dropTask(taskId))
+    toProcessIds.forEach(taskId => {
+      processTask(this.getTask(taskId), {
+        now,
+        backoff: this.backoff
+      })
+    })
+  }
+
+  startProcessingTasks() {
+    if (this.taskProcessingIntervalId === null) {
+      this.taskProcessingIntervalId = setInterval(
+        () => this.processTasks(),
+        this.interval
+      )
+    }
+  }
+
+  stopProcessingTasks() {
+    if (this.taskProcessingIntervalId !== null) {
+      clearInterval(this.taskProcessingIntervalId)
+      this.taskProcessingIntervalId = null
+    }
   }
 
   /**
@@ -17,7 +117,7 @@ export class TaskManager {
    *         - resolve {Function}
    *         - reject {Function}
    */
-  create(taskOptions) {
+  createTask(taskOptions) {
     const task = new Task({
       ...this.taskDefaultOptions,
       ...taskOptions,
@@ -26,6 +126,7 @@ export class TaskManager {
     this.tasks[task.id] = task
 
     task.once(TASK_FINISHED, () => {
+      this.tasks
       delete this.tasks[task.id]
     })
 
@@ -38,11 +139,11 @@ export class TaskManager {
    * @param  {String[randomString]} taskId
    * @return {Task}
    */
-  get(taskId) {
+  getTask(taskId) {
     return this.tasks[taskId]
   }
 
-  upsert(taskId, taskOptions) {
-    return this.get(taskId) || this.create(taskOptions)
+  upsertTask(taskId, taskOptions) {
+    return this.getTask(taskId) || this.createTask(taskOptions)
   }
 }

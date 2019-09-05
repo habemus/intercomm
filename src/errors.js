@@ -16,6 +16,13 @@ export class CancelError extends Error {
   }
 }
 
+export class TaskDroppedError extends Error {
+  constructor() {
+    super('Task dropped')
+    this.name = 'TASK_DROPPED_ERROR'
+  }
+}
+
 export class MaxAttemptsReachedError extends Error {
   constructor() {
     super('Max attempts reached')

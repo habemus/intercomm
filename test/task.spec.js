@@ -1,5 +1,14 @@
 import { EventEmitter } from 'events'
-import { Task, backoffExponential } from '../src'
+import {
+  Task,
+  backoffExponential,
+  processTask,
+
+  TASK_STATUS_IDLE,
+  TASK_STATUS_IN_PROGRESS,
+  TASK_STATUS_RESOLVED,
+  TASK_STATUS_REJECTED,
+} from '../src'
 
 import { unexpectedBehavior, wait } from './util'
 
@@ -267,6 +276,104 @@ describe('Task', () => {
       setTimeout(() => dependency1.reject(err), 100)
 
       return expect(dependant).rejects.toEqual(err)
+    })
+  })
+
+  describe.only('processTask(task, { now, backoff })', () => {
+    test('timeout', () => {
+      const task = new Task({
+        timeout: 100,
+        maxAttempts: 1,
+      })
+      task.attempt()
+
+      expect(task.status).toEqual(TASK_STATUS_IN_PROGRESS)
+      expect(task.attempts).toHaveLength(1)
+
+      return wait(100).then(() => {
+        processTask(task)
+
+        expect(task.attempts).toHaveLength(1)
+        expect(task.status).toEqual(TASK_STATUS_REJECTED)
+        expect(task.error.name).toEqual('TIMEOUT_ERROR')
+      })
+    })
+
+    describe('retry backoff', () => {
+      test('backoff === 0 (fixed immediate)', () => {
+        expect.assertions(7)
+        const processTaskConfig = { backoff: 0 }
+        const task = new Task({
+          timeout: 100,
+          maxAttempts: 2,
+        })
+        task.attempt()
+
+        expect(task.status).toEqual(TASK_STATUS_IN_PROGRESS)
+        expect(task.attempts).toHaveLength(1)
+
+        return wait(100).then(() => {
+          processTask(task, processTaskConfig)
+
+          // Another attempt happened
+          expect(task.attempts).toHaveLength(2)
+          expect(task.status).toEqual(TASK_STATUS_IN_PROGRESS)
+
+          return wait(100)
+        })
+        .then(() => {
+          processTask(task, processTaskConfig)
+
+          // No more attempts happened
+          expect(task.attempts).toHaveLength(2)
+
+          // Task rejected
+          expect(task.status).toEqual(TASK_STATUS_REJECTED)
+          expect(task.error.name).toEqual('TIMEOUT_ERROR')
+        })
+      })
+
+      test('backoff > 0 (fixed delay)', () => {
+        expect.assertions(9)
+        const processTaskConfig = { backoff: 100 }
+        const task = new Task({
+          timeout: 100,
+          maxAttempts: 2,
+        })
+
+        task.attempt()
+
+        expect(task.status).toEqual(TASK_STATUS_IN_PROGRESS)
+        expect(task.attempts).toHaveLength(1)
+
+        return wait(100).then(() => {
+          processTask(task, processTaskConfig)
+
+          // Task attempt count should not have changed (backoff + timeout === 200)
+          expect(task.attempts).toHaveLength(1)
+          expect(task.status).toEqual(TASK_STATUS_IN_PROGRESS)
+
+          return wait(100)
+        })
+        .then(() => {
+          processTask(task, processTaskConfig)
+
+          expect(task.attempts).toHaveLength(2)
+          expect(task.status).toEqual(TASK_STATUS_IN_PROGRESS)
+
+          return wait(100)
+        })
+        .then(() => {
+          processTask(task, processTaskConfig)
+
+          // No more attempts happened
+          expect(task.attempts).toHaveLength(2)
+
+          // Task rejected
+          expect(task.status).toEqual(TASK_STATUS_REJECTED)
+          expect(task.error.name).toEqual('TIMEOUT_ERROR')
+        })
+      })
     })
   })
 })

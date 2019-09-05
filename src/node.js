@@ -38,6 +38,7 @@ export class Node {
     this.sendMessageDefaultOptions = sendMessageDefaultOptions
 
     this.taskManager = new TaskManager()
+    this.taskManager.startProcessingTasks()
 
     onAttachListener(this.receiveMessage.bind(this))
   }
@@ -63,7 +64,7 @@ export class Node {
       source: this.id,
     }
 
-    const sendMessageTask = this.taskManager.create({
+    const sendMessageTask = this.taskManager.createTask({
       ...this.sendMessageDefaultOptions,
       ...sendMessageOptions,
       id,
@@ -73,10 +74,12 @@ export class Node {
       }
     })
 
+    sendMessageTask.on('attempt', () => this.onSendMessage(message))
+
     //
     // Ensure onSendMessage is always called on next tick
     //
-    Promise.resolve().then(() => this.onSendMessage(message))
+    Promise.resolve().then(() => sendMessageTask.attempt())
 
     return sendMessageTask
   }
@@ -85,7 +88,7 @@ export class Node {
    * Resolves the corresponding sendMessage task
    */
   receiveAck(message) {
-    const sendMessageTask = this.taskManager.get(message.payload)
+    const sendMessageTask = this.taskManager.getTask(message.payload)
 
     if (sendMessageTask) {
       sendMessageTask.resolve()
@@ -103,6 +106,10 @@ export class Node {
       this.acknowledgeMessageReceived(message)
       return false
     }
+  }
+
+  destroy() {
+    this.taskManager.stopProcessingTasks()
   }
 }
 

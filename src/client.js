@@ -41,7 +41,7 @@ export class Client extends Node {
      * Task representing the rpc request.
      * Will be solved when a response message is received.
      */
-    const requestTask = this.taskManager.create({
+    const requestTask = this.taskManager.createTask({
       ...this.defaultRequestOptions,
       ...requestOptions,
       id: requestId,
@@ -63,7 +63,7 @@ export class Client extends Node {
     //
     // Start the timeout timer
     //
-    requestTask.startAttempting()
+    requestTask.attempt()
 
     return requestTask
   }
@@ -79,7 +79,7 @@ export class Client extends Node {
 
     validateId(requestId)
 
-    const request = this.taskManager.get(requestId)
+    const request = this.taskManager.getTask(requestId)
 
     if (!request) {
       // Ignore requests that were not found

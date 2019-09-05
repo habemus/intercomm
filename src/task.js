@@ -1,10 +1,12 @@
 import { EventEmitter } from 'events'
 import { generateId } from './util'
-import { TimeoutError, CancelError, MaxAttemptsReachedError } from './errors'
+import { TimeoutError, MaxAttemptsReachedError } from './errors'
+import { backoffExponential } from './backoff-algorithms'
 
 export const TASK_ATTEMPT = 'attempt'
 export const TASK_RESOLVED = 'resolved'
 export const TASK_REJECTED = 'rejected'
+export const TASK_CANCELLED = 'cancelled'
 export const TASK_FINISHED = 'finished'
 
 export const TASK_STATUS_IDLE = 'idle'
@@ -12,38 +14,24 @@ export const TASK_STATUS_IN_PROGRESS = 'in-progress'
 export const TASK_STATUS_RESOLVED = 'resolved'
 export const TASK_STATUS_REJECTED = 'rejected'
 
-export const backoffExponential = ({
-  initialDelay = 100,
-  factor = 2,
-  maxDelay = 10000,
-} = {}) => retryAttemptCount => Math.min(
-  initialDelay * (factor ** retryAttemptCount),
-  maxDelay
-)
-
-export const backoffFromValues = values => retryAttemptCount => values[Math.min(
-  values.length - 1,
-  retryAttemptCount
-)]
-
 const defaultBackoff = backoffExponential()
 
-export const processTask = (task, {
-  now = Date.now(),
-  backoff = defaultBackoff,
-}) => {
-  const { attemtps, maxAttempts, timeout } = task
-  const lastAttempt = attemtps[attemtps.length - 1]
+export const processTask = (task, { now = Date.now(), backoff = defaultBackoff } = {}) => {
+  const { attempts, maxAttempts, timeout } = task
+  const lastAttempt = attempts[attempts.length - 1]
 
   switch (task.status) {
     case TASK_STATUS_IN_PROGRESS: {
       const timeSinceLastAttempt = now - lastAttempt.time
       if (timeSinceLastAttempt >= timeout) {
-        if (attemtps.length < maxAttempts) {
+        if (attempts.length < maxAttempts) {
+          backoff = typeof backoff === 'function'
+            ? backoff(attempts.length)
+            : backoff
           //
           // Should retry
           //
-          if (timeSinceLastAttempt >= timeout + backoff(attemtps.length)) {
+          if (timeSinceLastAttempt >= timeout + backoff) {
             task.attempt()
           }
         } else {
@@ -66,6 +54,7 @@ export class Task extends EventEmitter {
     createdAt = Date.now(),
     attempts = [],
     maxAttempts = 1,
+    status = TASK_STATUS_IDLE,
     timeout = 1000,
     dependencies = [],
     metadata,
@@ -90,25 +79,13 @@ export class Task extends EventEmitter {
     this.maxAttempts = maxAttempts
 
     /**
-     * ID that refers to the setTimeout call
-     * that will timeout the current attempt
-     */
-    this.currentAttemptTimeoutId = null
-
-    /**
-     * ID that refers to the setTimeout call
-     * that will emit a 'retry' call
-     */
-    this.retryBackoffTimeoutId = null
-
-    /**
      * Describes the task's status:
      * - idle
      * - in-progress
      * - resolved
      * - rejected
      */
-    this.status = TASK_STATUS_IDLE
+    this.status = status
 
     /**
      * Tasks on which this task depend on.
@@ -182,7 +159,11 @@ export class Task extends EventEmitter {
   }
 
   cancel(error = null) {
-    if (this.status !== TASK_STATUS_RESOLVED && this.status !== TASK_STATUS_REJECTED) {
+    if (this.status !== TASK_STATUS_RESOLVED &&
+        this.status !== TASK_STATUS_REJECTED) {
+
+      this.emit(TASK_CANCELLED, error)
+
       if (error instanceof Error) {
         this.reject(error)
       } else {
@@ -192,7 +173,8 @@ export class Task extends EventEmitter {
   }
 
   resolve(result) {
-    if (this.status !== TASK_STATUS_IDLE && this.status !== TASK_STATUS_IN_PROGRESS) {
+    if (this.status !== TASK_STATUS_IDLE &&
+        this.status !== TASK_STATUS_IN_PROGRESS) {
       throw new Error('Task cannot be resolved from current status')
     }
 
@@ -204,7 +186,8 @@ export class Task extends EventEmitter {
   }
 
   reject(error) {
-    if (this.status !== TASK_STATUS_IDLE && this.status !== TASK_STATUS_IN_PROGRESS) {
+    if (this.status !== TASK_STATUS_IDLE &&
+        this.status !== TASK_STATUS_IN_PROGRESS) {
       throw new Error('Task cannot be rejected from current status')
     }
 
