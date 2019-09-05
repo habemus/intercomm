@@ -1,6 +1,8 @@
 import { Node } from './node'
 import { MESSAGE_TYPES } from './constants'
 
+import { MethodNotDefinedError } from './errors'
+
 import {
   validateId,
   validateMethodName,
@@ -12,56 +14,72 @@ import {
 
 export class Server extends Node {
   constructor({
+    handleRequestTimeout = Infinity,
     methods,
     ...options
   }) {
     super(options)
 
+    /**
+     * Methods exposed by the server
+     */
     this.methods = methods
+
+    /**
+     * Milliseconds after which a function handling the request
+     * should be timed out.
+     *
+     * default: Infinity
+     */
+    this.handleRequestTimeout = handleRequestTimeout
   }
 
-  receiveRequest({ source, payload: { requestId, method, parameters } }) {
+  handleRequest(source, requestId, methodName, parameters) {
     validateId(requestId)
     validateId(source)
-    validateMethodName(method)
+    validateMethodName(methodName)
     validateParameters(parameters)
 
     const onSuccess = result => {
       this.sendMessage({
         type: this.messageTypes.response,
+        destination: source,
         payload: {
           requestId,
           result,
           error: false
         }
-      }, source)
+      })
     }
 
     const onError = error => {
       this.sendMessage({
         type: this.messageTypes.response,
+        destination: source,
         payload: {
           requestId,
           result: error,
           error: error.name || 'Error',
         }
-      }, source)
+      })
     }
 
-    let task = this.taskManager.get(requestId)
+    const taskId = `${source}/${requestId}`
+    let task = this.taskManager.getTask(taskId)
 
     if (!task) {
       //
       // Refers to a new request
       //
-      task = this.taskManager.create(noop, {
-        id: requestId
+      task = this.taskManager.createTask({
+        id: taskId,
+        timeout: this.handleRequestTimeout,
       })
 
-      const fn = this.methods[method]
+      const fn = this.methods[methodName]
 
       if (typeof fn !== 'function') {
-        task.reject(new MethodNotDefinedError(method))
+        task.reject(new MethodNotDefinedError(methodName))
       } else {
         promiseTry(fn, parameters).then(
           result => task.resolve(result),
@@ -83,7 +101,12 @@ export class Server extends Node {
     if (super.receiveMessage(message)) {
       return true
     } else if (message.type === this.messageTypes.request) {
-      return this.receiveRequest(message)
+      return this.handleRequest(
+        message.source,
+        message.payload.requestId,
+        message.payload.method,
+        message.payload.parameters
+      )
     } else {
       return false
     }

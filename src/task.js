@@ -55,7 +55,7 @@ export class Task extends EventEmitter {
     attempts = [],
     maxAttempts = 1,
     status = TASK_STATUS_IDLE,
-    timeout = 1000,
+    timeout = Infinity,
     dependencies = [],
     metadata,
   } = {}) {

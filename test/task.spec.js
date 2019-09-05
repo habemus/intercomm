@@ -279,7 +279,7 @@ describe('Task', () => {
     })
   })
 
-  describe.only('processTask(task, { now, backoff })', () => {
+  describe('processTask(task, { now, backoff })', () => {
     test('timeout', () => {
       const task = new Task({
         timeout: 100,
@@ -290,13 +290,13 @@ describe('Task', () => {
       expect(task.status).toEqual(TASK_STATUS_IN_PROGRESS)
       expect(task.attempts).toHaveLength(1)
 
-      return wait(100).then(() => {
-        processTask(task)
-
-        expect(task.attempts).toHaveLength(1)
-        expect(task.status).toEqual(TASK_STATUS_REJECTED)
-        expect(task.error.name).toEqual('TIMEOUT_ERROR')
+      processTask(task, {
+        now: Date.now() + 100,
       })
+
+      expect(task.attempts).toHaveLength(1)
+      expect(task.status).toEqual(TASK_STATUS_REJECTED)
+      expect(task.error.name).toEqual('TIMEOUT_ERROR')
     })
 
     describe('retry backoff', () => {

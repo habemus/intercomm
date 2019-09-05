@@ -142,8 +142,4 @@ export class TaskManager {
   getTask(taskId) {
     return this.tasks[taskId]
   }
-
-  upsertTask(taskId, taskOptions) {
-    return this.getTask(taskId) || this.createTask(taskOptions)
-  }
 }
