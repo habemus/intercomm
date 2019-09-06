@@ -1,11 +1,11 @@
 {
   "name": "intercomm",
-  "version": "3.0.0-alpha.4",
+  "version": "3.0.0-beta.1",
   "description": "",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
   "scripts": {
-    "test": "jest",
+    "test": "jest --collectCoverage --collectCoverageFrom ./src/**/*.js",
     "test-watch": "jest --watch",
     "build": "rm -rf dist && rollup --config ./rollup.config.js",
     "prepublish": "npm run build"

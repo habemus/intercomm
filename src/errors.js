@@ -7,15 +7,6 @@ export class TimeoutError extends Error {
   }
 }
 
-export class CancelError extends Error {
-  constructor(reason) {
-    super(reason ? `Cancelled: ${reason}` : 'Cancelled')
-
-    this.name = 'CANCEL_ERROR'
-    this.reason = reason
-  }
-}
-
 export class TaskDroppedError extends Error {
   constructor() {
     super('Task dropped')

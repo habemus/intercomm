@@ -29,6 +29,7 @@ export class Client extends Node {
     const requestId = generateId(this.messageTypes.request)
 
     const sendMessageTask = this.sendMessage({
+      id: generateId(`message-${this.messageTypes.request}`),
       type: this.messageTypes.request,
       payload: {
         requestId,

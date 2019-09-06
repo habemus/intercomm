@@ -1,9 +1,9 @@
 import { EventEmitter } from 'events'
-import { backoffExponential } from '../src'
+import { backoffExponential, backoffFromValues } from '../src'
 
 import { unexpectedBehavior, wait } from './util'
 
-describe('backoffExponential', () => {
+describe('backoff algorithms', () => {
   test('backoffExponential', () => {
     const backoff = backoffExponential({
       initialDelay: 50,
@@ -20,5 +20,18 @@ describe('backoffExponential', () => {
       1000,
       1000
     ])
+  })
+
+  test('backoffFromValues', () => {
+    const backoff = backoffFromValues([50, 50, 60, 60, 70, 100])
+
+    expect(backoff(0)).toEqual(50)
+    expect(backoff(1)).toEqual(50)
+    expect(backoff(2)).toEqual(60)
+    expect(backoff(3)).toEqual(60)
+    expect(backoff(4)).toEqual(70)
+    expect(backoff(5)).toEqual(100)
+    expect(backoff(6)).toEqual(100)
+    expect(backoff(7)).toEqual(100)
   })
 })

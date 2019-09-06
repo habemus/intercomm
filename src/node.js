@@ -43,19 +43,6 @@ export class Node {
     onAttachListener(this.receiveMessage.bind(this))
   }
 
-  acknowledgeMessageReceived(message) {
-    //
-    // Ensure onSendMessage is always called on next tick
-    //
-    Promise.resolve().then(() => this.onSendMessage({
-      type: this.messageTypes.ack,
-      id: generateId(this.messageTypes.ack),
-      payload: message.id,
-      destination: message.source,
-      source: this.id,
-    }))
-  }
-
   sendMessage({ id = generateId(), ...message }, sendMessageOptions) {
 
     message = {
@@ -82,6 +69,19 @@ export class Node {
     Promise.resolve().then(() => sendMessageTask.attempt())
 
     return sendMessageTask
+  }
+
+  acknowledgeMessageReceived(message) {
+    //
+    // Ensure onSendMessage is always called on next tick
+    //
+    Promise.resolve().then(() => this.onSendMessage({
+      type: this.messageTypes.ack,
+      id: generateId(this.messageTypes.ack),
+      payload: message.id,
+      destination: message.source,
+      source: this.id,
+    }))
   }
 
   /**

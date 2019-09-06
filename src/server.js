@@ -42,6 +42,7 @@ export class Server extends Node {
 
     const onSuccess = result => {
       this.sendMessage({
+        id: generateId(`message-${this.messageTypes.response}`),
         type: this.messageTypes.response,
         destination: source,
         payload: {
@@ -54,6 +55,7 @@ export class Server extends Node {
 
     const onError = error => {
       this.sendMessage({
+        id: generateId(`message-${this.messageTypes.response}`),
         type: this.messageTypes.response,
         destination: source,
         payload: {
