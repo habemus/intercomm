@@ -11,6 +11,7 @@ describe('createClientProxy', () => {
 
     const client = createClient({
       id: 'client-1',
+      serverId: 'server-1',
       onSendMessage: message => messageBroker.emit('client-1/message', message),
       onAttachListener: listener => messageBroker.on('server-1/message', listener),
     })

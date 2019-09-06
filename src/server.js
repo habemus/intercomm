@@ -15,7 +15,7 @@ import {
 export class Server extends Node {
   constructor({
     handleRequestTimeout = Infinity,
-    methods,
+    methods = {},
     ...options
   }) {
     super(options)

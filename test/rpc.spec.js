@@ -12,6 +12,7 @@ describe('rpc', () => {
 
     const client = createClient({
       id: 'client-1',
+      serverId: 'server-1',
       onSendMessage: message => broker1.emit('message', message),
       onAttachListener: listener => broker2.on('message', listener),
     })

@@ -11,6 +11,7 @@ describe('client', () => {
 
       const client = createClient({
         id: 'client-1',
+        serverId: 'server-1',
         onSendMessage: message => {
           sentMessages.push(message)
 
@@ -57,6 +58,7 @@ describe('client', () => {
 
       const client = createClient({
         id: 'client-1',
+        serverId: 'server-1',
         onSendMessage: message => {},
         defaultRequestOptions: {
           timeout: 100,
@@ -77,6 +79,7 @@ describe('client', () => {
       const sentMessages = []
 
       const client = createClient({
+        serverId: 'server-1',
         onSendMessage: message => {
           sentMessages.push(message)
         }
@@ -113,6 +116,7 @@ describe('client', () => {
       expect.assertions(3)
 
       const client = createClient({
+        serverId: 'server-1',
         onSendMessage: message => {}
       })
 

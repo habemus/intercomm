@@ -15,9 +15,13 @@ import { Node } from './node'
 export class Client extends Node {
   constructor({
     defaultRequestOptions = {},
+    serverId,
     ...options
   }) {
     super(options)
+
+    validateId(serverId)
+    this.serverId = serverId
 
     this.defaultRequestOptions = defaultRequestOptions
   }
@@ -31,6 +35,7 @@ export class Client extends Node {
     const sendMessageTask = this.sendMessage({
       id: generateId(`message-${this.messageTypes.request}`),
       type: this.messageTypes.request,
+      destination: this.serverId,
       payload: {
         requestId,
         method,
