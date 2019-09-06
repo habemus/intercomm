@@ -6,7 +6,6 @@ import {
 } from './util'
 
 import { MESSAGE_TYPES } from './constants'
-import { SendMessageError } from './errors'
 import { TaskManager } from './task-manager'
 
 const logUnhandledMessage = message => {

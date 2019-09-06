@@ -1,4 +1,5 @@
-import { EventEmitter } from 'events'
+import events from 'events'
+const { EventEmitter } = events
 import { generateId } from './util'
 import { TimeoutError, MaxAttemptsReachedError } from './errors'
 import { backoffExponential } from './backoff-algorithms'
