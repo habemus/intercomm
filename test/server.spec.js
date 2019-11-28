@@ -45,6 +45,7 @@ describe('server', () => {
       expect(responseMessage.destination).toEqual('client-1')
       expect(responseMessage.payload).toEqual({
         requestId: 'request-1-id',
+        method: 'someMethod',
         result: 'hey, received: PARAM-1 and PARAM-2',
         error: false
       })

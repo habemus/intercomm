@@ -47,6 +47,7 @@ export class Server extends Node {
         destination: source,
         payload: {
           requestId,
+          method: methodName,
           result,
           error: false
         }
@@ -60,6 +61,7 @@ export class Server extends Node {
         destination: source,
         payload: {
           requestId,
+          method: methodName,
           result: error,
           error: error.name || 'Error',
         }
