@@ -1,6 +1,6 @@
 import { createClient } from './client'
 import { createServer } from './server'
-import { MESSAGE_TYPES } from './constants'
+import { MESSAGE_TYPES, nodeIds, ipcMessageEventName } from './constants'
 import { generateId } from './util'
 
 export const createClientProxy = (client, methods) => {
@@ -13,7 +13,9 @@ export const createClientProxy = (client, methods) => {
 }
 
 export {
-  MESSAGE_TYPES
+  MESSAGE_TYPES,
+  nodeIds,
+  ipcMessageEventName
 }
 
 export * from './node'
@@ -22,4 +24,3 @@ export * from './client'
 export * from './task-manager'
 export * from './task'
 export * from './backoff-algorithms'
-export * from './node-ids'
