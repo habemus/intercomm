@@ -11,11 +11,25 @@ export const nodeIds = ({
   localId,
   remoteId,
 }) => ({
-  LOCAL_CLIENT_ID: `[local:${localId}]->[remote:${remoteId}]/client`,
-  LOCAL_SERVER_ID: `[local:${localId}]->[remote:${remoteId}]/server`,
-  REMOTE_CLIENT_ID: `[local:${remoteId}]->[remote:${localId}]/client`,
-  REMOTE_SERVER_ID: `[local:${remoteId}]->[remote:${localId}]/server`,
+  // LOCAL_CLIENT_ID: `[local:${localId}]->[remote:${remoteId}]/client`,
+  LOCAL_CLIENT_ID: clientNodeId({ clientId: localId, serverId: remoteId }),
+  // LOCAL_SERVER_ID: `[local:${localId}]->[remote:${remoteId}]/server`,
+  LOCAL_SERVER_ID: serverNodeId({ clientId: remoteId, serverId: localId }),
+  // REMOTE_CLIENT_ID: `[local:${remoteId}]->[remote:${localId}]/client`,
+  REMOTE_CLIENT_ID: clientNodeId({ clientId: remoteId, serverId: localId }),
+  // REMOTE_SERVER_ID: `[local:${remoteId}]->[remote:${localId}]/server`,
+  REMOTE_SERVER_ID: serverNodeId({ clientId: localId, serverId: remoteId }),
 })
+
+export const serverNodeId = ({
+  serverId,
+  clientId
+}) => `[local:${serverId}]->[remote:${clientId}]/server`
+
+export const clientNodeId = ({
+  serverId,
+  clientId
+}) => `[local:${clientId}]->[remote:${serverId}]/client`
 
 /**
  * Generates an ipc message event name given source and destination ids
