@@ -106,6 +106,12 @@ export class Task extends EventEmitter {
 
       dep.on('rejected', err => this.reject(err))
     })
+
+    /**
+     * Stores metadata about the task to facilitate inspection
+     * and debugging
+     */
+    this.metadata = metadata
   }
 
   /**
@@ -197,5 +203,22 @@ export class Task extends EventEmitter {
 
     this.emit(TASK_REJECTED, error)
     this.emit(TASK_FINISHED)
+  }
+
+  toJSON() {
+    return {
+      id: this.id,
+      createdAt: this.createdAt,
+      attempts: this.attempts,
+      maxAttempts: this.maxAttempts,
+      status: this.status,
+      timeout: this.timeout,
+      metadata: this.metadata,
+      dependencies: this.dependencies.map(dep => dep.toJSON()),
+    }
+  }
+
+  toString() {
+    return this.toJSON()
   }
 }

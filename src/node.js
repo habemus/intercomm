@@ -21,7 +21,8 @@ export class Node {
     onUnhandledMessage = logUnhandledMessage,
     onAttachListener = noop,
 
-    sendMessageDefaultOptions = {}
+    sendMessageDefaultOptions = {},
+    taskManagerOptions = {},
   }) {
     validateId(id)
 
@@ -36,7 +37,7 @@ export class Node {
     this.onUnhandledMessage = onUnhandledMessage
     this.sendMessageDefaultOptions = sendMessageDefaultOptions
 
-    this.taskManager = new TaskManager()
+    this.taskManager = new TaskManager(taskManagerOptions)
     this.taskManager.startProcessingTasks()
 
     onAttachListener(this.receiveMessage.bind(this))

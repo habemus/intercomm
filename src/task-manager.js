@@ -11,7 +11,7 @@ import {
 } from './errors'
 
 const logTaskDropped = task => {
-  console.warn('Task dropped', task)
+  console.warn('Task dropped', JSON.stringify(task.toJSON(), null, '  '))
 }
 
 export class TaskManager {
@@ -71,23 +71,39 @@ export class TaskManager {
   dropTask(taskId) {
     const task = this.getTask(taskId)
 
-    this.onTaskDropped(task)
-    task.cancel(new TaskDroppedError())
+    //
+    // Drop the task on next tick
+    // in order to avoid synchronous cancellation of dependencies
+    // resulting in task drop errors
+    //
+    return Promise.resolve().then(() => {
+      this.onTaskDropped(task)
+      task.cancel(new TaskDroppedError())
+    })
   }
 
+  //
+  // TODO: this is a naive implementation
+  // The correct implementation should map out all
+  // the dependency tree and cancel tasks accordingly.
+  //
   processTasks(now = Date.now()) {
+    // Rely on task definition order
     const taskIds = Object.keys(this.tasks)
     const taskCount = taskIds.length
-    const toDropIds = taskIds.slice(0, taskCount - this.maxTasks)
-    const toProcessIds = taskIds.slice(taskCount - this.maxTasks, taskCount)
+    const excess = Math.max(0, taskCount - this.maxTasks)
+    const toDropIds = taskIds.slice(0, excess)
+    const toProcessIds = taskIds.slice(excess)
 
-    toDropIds.forEach(taskId => this.dropTask(taskId))
     toProcessIds.forEach(taskId => {
       processTask(this.getTask(taskId), {
         now,
         backoff: this.backoff
       })
     })
+
+    return Promise.all(toDropIds.map(taskId => this.dropTask(taskId)))
+      .then(() => undefined)
   }
 
   startProcessingTasks() {

@@ -56,17 +56,20 @@ describe('TaskManager', () => {
 
   describe('dropTask(taskId)', () => {
     test('expect task to be cancelled and removed from the task manager', () => {
+      expect.assertions(3)
+
       const manager = new TaskManager({
         onTaskDropped: () => {}
       })
 
       const task1 = manager.createTask({ id: 'task1' })
 
-      manager.dropTask('task1')
+      return manager.dropTask('task1').then(() => {
 
-      expect(task1.status).toEqual(TASK_STATUS_REJECTED)
-      expect(task1.error.name).toEqual('TASK_DROPPED_ERROR')
-      expect(manager.taskCount).toEqual(0)
+        expect(task1.status).toEqual(TASK_STATUS_REJECTED)
+        expect(task1.error.name).toEqual('TASK_DROPPED_ERROR')
+        expect(manager.taskCount).toEqual(0)
+      })
     })
   })
 
@@ -117,9 +120,9 @@ describe('TaskManager', () => {
 
       expect(manager.taskCount).toEqual(7)
 
-      manager.processTasks()
-
-      expect(manager.taskCount).toEqual(5)
+      return manager.processTasks().then(() => {
+        expect(manager.taskCount).toEqual(5)
+      })
     })
   })
 })
